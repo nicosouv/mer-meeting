@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 X-Nemo-Application-Type=silica-qt5
-Icon=harbour-mer-meeting
+Icon=mer-meeting
 Exec=mer-meeting
 Name=Mer Meeting
 Name[de]=Mer Meeting
