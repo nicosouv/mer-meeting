@@ -37,6 +37,17 @@ Page {
             }
         }
 
+        PushUpMenu {
+            MenuItem {
+                text: qsTr("Scroll to top")
+                onClicked: listView.positionViewAtBeginning()
+            }
+            MenuItem {
+                text: qsTr("Scroll to bottom")
+                onClicked: listView.positionViewAtEnd()
+            }
+        }
+
         Column {
             id: headerColumn
             width: parent.width

@@ -94,7 +94,7 @@ Page {
                 }
 
                 onClicked: {
-                    pageStack.push(Qt.resolvedUrl("MeetingSummaryPage.qml"), {
+                    pageStack.push(Qt.resolvedUrl("MeetingLogPage.qml"), {
                         meeting: modelData
                     })
                 }
