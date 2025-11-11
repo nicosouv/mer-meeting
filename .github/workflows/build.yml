@@ -38,9 +38,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
 
-      - name: Update version in YAML spec
+      - name: Update version in spec file
         run: |
-          sed -i "s/^Version:.*/Version: ${{ steps.version.outputs.version }}/" rpm/mer-meeting.yaml
+          sed -i "s/^Version:.*/Version:    ${{ steps.version.outputs.version }}/" rpm/mer-meeting.spec
 
       - name: Build RPM for Sailfish OS
         id: build
