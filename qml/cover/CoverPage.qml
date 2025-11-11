@@ -35,15 +35,7 @@ CoverBackground {
     Label {
         id: label
         anchors.centerIn: parent
-        text: qsTr("My Cover")
-    }
-
-    CoverActionList {
-        id: coverAction
-
-        CoverAction {
-            iconSource: "image://theme/refresh"
-        }
+        text: qsTr("Mer Meeting")
     }
 }
 
