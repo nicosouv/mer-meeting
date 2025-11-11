@@ -1,47 +1,107 @@
-name: Build RPM
+name: Build and Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+env:
+  SAILFISH_RELEASE: '4.5.0.18'
 
 jobs:
   build:
+    name: Build RPM for ${{ matrix.arch }}
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        arch: [armv7hl, aarch64, i486]
+        arch:
+          - armv7hl
+          - i486
+          - aarch64
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build RPM for ${{ matrix.arch }}
-        uses: coderus/github-sfos-build@master
         with:
-          release: '4.5.0.18'
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="1.0.0-dev"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Update version in YAML spec
+        run: |
+          sed -i "s/^Version:.*/Version: ${{ steps.version.outputs.version }}/" rpm/mer-meeting.yaml
+
+      - name: Build RPM for Sailfish OS
+        id: build
+        uses: R1tschY/sailfish-build-rpm@v1
+        with:
           arch: ${{ matrix.arch }}
+          release: ${{ env.SAILFISH_RELEASE }}
+          fix-version: false
+          check: false
+
+      - name: List built packages
+        run: |
+          ls -lh RPMS/
+          echo "Built packages:"
+          find RPMS -name "*.rpm" -type f
 
       - name: Upload RPM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rpm-${{ matrix.arch }}
           path: RPMS/*.rpm
+          if-no-files-found: error
 
-  release:
+  create-release:
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: rpm-*
-          merge-multiple: true
+          path: release-packages
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Organize packages
+        run: |
+          mkdir -p packages
+          find release-packages -name "*.rpm" -not -name "*debuginfo*" -not -name "*debugsource*" -exec cp {} packages/ \;
+          ls -lh packages/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          files: '*.rpm'
+          name: Mer Meeting v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: packages/*.rpm
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
