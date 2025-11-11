@@ -15,6 +15,7 @@ class Meeting : public QObject
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString logUrl READ logUrl CONSTANT)
     Q_PROPERTY(QString filename READ filename CONSTANT)
+    Q_PROPERTY(QString month READ month CONSTANT)
 
 public:
     explicit Meeting(const QString &filename, QObject *parent = nullptr);
@@ -25,6 +26,7 @@ public:
     QString url() const;
     QString logUrl() const;
     QString filename() const;
+    QString month() const;
 
     QDateTime dateTime() const { return m_dateTime; }
 

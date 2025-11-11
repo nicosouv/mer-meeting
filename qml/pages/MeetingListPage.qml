@@ -6,8 +6,34 @@ Page {
     id: page
 
     property int year
+    property var allMeetings: []
+    property bool showOnlyFavorites: false
 
     allowedOrientations: Orientation.All
+
+    function filterMeetings() {
+        if (showOnlyFavorites) {
+            var filtered = []
+            for (var i = 0; i < allMeetings.length; i++) {
+                if (meetingManager.isFavorite(allMeetings[i].filename)) {
+                    filtered.push(allMeetings[i])
+                }
+            }
+            listView.model = filtered
+        } else {
+            listView.model = allMeetings
+        }
+    }
+
+    function countFavorites() {
+        var count = 0
+        for (var i = 0; i < allMeetings.length; i++) {
+            if (meetingManager.isFavorite(allMeetings[i].filename)) {
+                count++
+            }
+        }
+        return count
+    }
 
     Component.onCompleted: {
         meetingManager.fetchMeetingsForYear(year)
@@ -16,20 +42,27 @@ Page {
     Connections {
         target: meetingManager
         onMeetingsLoaded: {
-            listView.model = meetings
+            allMeetings = meetings
+            filterMeetings()
         }
         onFavoritesChanged: {
-            // Force model refresh to update favorite indicators
-            var temp = listView.model
-            listView.model = null
-            listView.model = temp
+            filterMeetings()
         }
+    }
+
+    onShowOnlyFavoritesChanged: {
+        filterMeetings()
     }
 
     SilicaFlickable {
         anchors.fill: parent
 
         PullDownMenu {
+            MenuItem {
+                text: showOnlyFavorites ? qsTr("Show all meetings") : qsTr("Show only favorites")
+                visible: countFavorites() > 0
+                onClicked: showOnlyFavorites = !showOnlyFavorites
+            }
             MenuItem {
                 text: qsTr("Refresh")
                 onClicked: meetingManager.fetchMeetingsForYear(year)
@@ -43,6 +76,28 @@ Page {
             PageHeader {
                 title: qsTr("Meetings %1").arg(year)
             }
+
+            // Statistics row
+            Row {
+                x: Theme.horizontalPageMargin
+                spacing: Theme.paddingLarge
+                visible: allMeetings.length > 0
+
+                Label {
+                    text: qsTr("%n meeting(s)", "", allMeetings.length)
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.secondaryHighlightColor
+                }
+
+                Label {
+                    visible: countFavorites() > 0
+                    text: "★ " + countFavorites()
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.highlightColor
+                }
+            }
+
+            Item { width: 1; height: Theme.paddingMedium }
 
             BusyIndicator {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -70,6 +125,12 @@ Page {
             }
 
             clip: true
+
+            section.property: "month"
+            section.delegate: SectionHeader {
+                text: section
+                height: Theme.itemSizeSmall
+            }
 
             delegate: ListItem {
                 id: delegate
@@ -121,6 +182,12 @@ Page {
             }
 
             VerticalScrollDecorator {}
+
+            ViewPlaceholder {
+                enabled: !meetingManager.loading && listView.count === 0
+                text: showOnlyFavorites ? qsTr("No favorite meetings") : qsTr("No meetings found")
+                hintText: showOnlyFavorites ? qsTr("Mark meetings as favorites to see them here") : ""
+            }
         }
     }
 }

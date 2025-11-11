@@ -41,7 +41,7 @@ QString Meeting::time() const
 
 QString Meeting::title() const
 {
-    return QString("Sailfish OS Meeting");
+    return QString("Sailfish OS Meeting - %1").arg(date());
 }
 
 QString Meeting::url() const
@@ -65,4 +65,9 @@ QString Meeting::logUrl() const
 QString Meeting::filename() const
 {
     return m_filename;
+}
+
+QString Meeting::month() const
+{
+    return m_dateTime.date().toString("MMMM yyyy");
 }
