@@ -18,11 +18,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build RPM for ${{ matrix.arch }}
-        uses: R1tschY/sailfish-build-rpm@v1
+        uses: coderus/github-sfos-build@master
         with:
+          release: '4.5.0.18'
           arch: ${{ matrix.arch }}
-          release: '4.6.0.11'
-          fix-version: false
 
       - name: Upload RPM artifacts
         uses: actions/upload-artifact@v4
