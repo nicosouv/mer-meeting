@@ -14,10 +14,22 @@ TARGET = mer-meeting
 
 CONFIG += sailfishapp
 
-SOURCES += src/mer-meeting.cpp
+QT += network
+
+SOURCES += src/mer-meeting.cpp \
+    src/meetingmanager.cpp \
+    src/meeting.cpp
+
+HEADERS += \
+    src/meetingmanager.h \
+    src/meeting.h
 
 OTHER_FILES += qml/mer-meeting.qml \
     qml/cover/CoverPage.qml \
+    qml/pages/YearSelectionPage.qml \
+    qml/pages/MeetingListPage.qml \
+    qml/pages/MeetingSummaryPage.qml \
+    qml/pages/MeetingLogPage.qml \
     rpm/mer-meeting.spec \
     rpm/mer-meeting.yaml \
     translations/*.ts \
@@ -36,8 +48,4 @@ CONFIG += sailfishapp_i18n
 TRANSLATIONS += translations/mer-meeting-de.ts
 
 DISTFILES += \
-    rpm/mer-meeting.changes \
-    qml/pages/SavedLogs.qml \
-    qml/pages/Main.qml \
-    qml/js/LogsList.js \
-    qml/js/libs/underscore.js
+    rpm/mer-meeting.changes

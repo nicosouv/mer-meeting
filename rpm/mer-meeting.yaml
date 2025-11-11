@@ -1,18 +1,20 @@
 Name: mer-meeting
-Summary: Mer Meeting
-Version: 0.1
+Summary: Sailfish OS Meeting Logs Viewer
+Version: 1.0
 Release: 1
 # The contents of the Group field should be one of the groups listed here:
 # http://gitorious.org/meego-developer-tools/spectacle/blobs/master/data/GROUPS
 Group: Qt/Qt
-URL: http://example.org/
-License: LICENSE
+URL: https://github.com/PoulpePoulpePoulpe/mer-meeting
+License: BSD-3-Clause
 # This must be generated before uploading a package to a remote build service.
 # Usually this line does not need to be modified.
 Sources:
 - '%{name}-%{version}.tar.bz2'
 Description: |
-  Short description of my Sailfish OS Application
+  Browse and read Sailfish OS community meeting logs from irclogs.sailfishos.org.
+  View meeting summaries, participants, topics, and full IRC conversation logs
+  in a native Sailfish OS interface.
 Configure: none
 # The qtc5 builder inserts macros to allow QtCreator to have fine
 # control over qmake/make execution
@@ -25,6 +27,7 @@ PkgConfigBR:
   - Qt5Core
   - Qt5Qml
   - Qt5Quick
+  - Qt5Network
 
 # Build dependencies without a pkgconfig setup can be listed here
 # PkgBR:

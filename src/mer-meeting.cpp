@@ -33,18 +33,30 @@
 #endif
 
 #include <sailfishapp.h>
-
+#include <QGuiApplication>
+#include <QQuickView>
+#include <QQmlContext>
+#include "meetingmanager.h"
+#include "meeting.h"
 
 int main(int argc, char *argv[])
 {
-    // SailfishApp::main() will display "qml/template.qml", if you need more
-    // control over initialization, you can use:
-    //
-    //   - SailfishApp::application(int, char *[]) to get the QGuiApplication *
-    //   - SailfishApp::createView() to get a new QQuickView * instance
-    //   - SailfishApp::pathTo(QString) to get a QUrl to a resource file
-    //
-    // To display the view, call "show()" (will show fullscreen on device).
+    QGuiApplication *app = SailfishApp::application(argc, argv);
+    app->setOrganizationName("mer-meeting");
+    app->setApplicationName("mer-meeting");
 
-    return SailfishApp::main(argc, argv);
+    QQuickView *view = SailfishApp::createView();
+
+    // Register QML types
+    qmlRegisterType<Meeting>("harbour.mer.meeting", 1, 0, "Meeting");
+    qmlRegisterType<MeetingManager>("harbour.mer.meeting", 1, 0, "MeetingManager");
+
+    // Create and expose MeetingManager singleton
+    MeetingManager *meetingManager = new MeetingManager(app);
+    view->rootContext()->setContextProperty("meetingManager", meetingManager);
+
+    view->setSource(SailfishApp::pathTo("qml/mer-meeting.qml"));
+    view->show();
+
+    return app->exec();
 }

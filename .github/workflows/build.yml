@@ -1,0 +1,51 @@
+name: Build RPM
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        arch: [armv7hl, aarch64, i486]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build RPM for ${{ matrix.arch }}
+        run: |
+          docker run --rm \
+            -v $PWD:/source \
+            -w /source \
+            coderus/sailfishos-platform-sdk:latest \
+            bash -c "
+              mb2 -t SailfishOS-latest-${{ matrix.arch }} build
+            "
+
+      - name: Upload RPM artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: RPMS/*.rpm
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            rpm-*/*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

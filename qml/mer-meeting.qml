@@ -34,7 +34,7 @@ import "pages"
 
 ApplicationWindow
 {
-    initialPage: Component { Main { } }
+    initialPage: Component { YearSelectionPage { } }
     cover: Qt.resolvedUrl("cover/CoverPage.qml")
     allowedOrientations: defaultAllowedOrientations
 }
