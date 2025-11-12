@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QMap>
 #include <QTime>
+#include <algorithm>
 
 MeetingManager::MeetingManager(QObject *parent)
     : QObject(parent)
@@ -368,8 +369,11 @@ void MeetingManager::fetchNextMeetingDate()
     qDebug() << "Fetching next meeting date...";
 
     // Get current year and next year
-    int currentYear = QDateTime::currentDateTime().date().year();
+    QDateTime now = QDateTime::currentDateTime();
+    int currentYear = now.date().year();
     int nextYear = currentYear + 1;
+
+    qDebug() << "Current year from system:" << currentYear << "Current date:" << now.toString(Qt::ISODate);
 
     // Try current year first
     QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(currentYear);
@@ -378,74 +382,58 @@ void MeetingManager::fetchNextMeetingDate()
     QNetworkReply *reply = m_networkManager->get(request);
 
     // Create a lambda to handle the meeting list for next meeting date
-    connect(reply, &QNetworkReply::finished, [this, reply, currentYear, nextYear]() {
-        if (reply->error() != QNetworkReply::NoError) {
+    connect(reply, &QNetworkReply::finished, [this, reply, currentYear]() {
+        QString html;
+        QList<Meeting*> currentYearMeetings;
+
+        if (reply->error() == QNetworkReply::NoError) {
+            html = QString::fromUtf8(reply->readAll());
+            currentYearMeetings = parseMeetingList(html);
+            qDebug() << "Found" << currentYearMeetings.size() << "meetings in year" << currentYear;
+        } else {
             qDebug() << "Failed to fetch meetings for year" << currentYear;
-            reply->deleteLater();
-
-            // Try next year if current year failed
-            QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(nextYear);
-            QNetworkRequest request(url);
-            QNetworkReply *nextYearReply = m_networkManager->get(request);
-            connect(nextYearReply, &QNetworkReply::finished, this, [this, nextYearReply, nextYear]() {
-                if (nextYearReply->error() != QNetworkReply::NoError) {
-                    qDebug() << "Failed to fetch meetings for year" << nextYear;
-                    nextYearReply->deleteLater();
-                    return;
-                }
-
-                QString html = QString::fromUtf8(nextYearReply->readAll());
-                nextYearReply->deleteLater();
-
-                QList<Meeting*> meetings = parseMeetingList(html);
-                if (!meetings.isEmpty()) {
-                    fetchLogForNextMeeting(meetings.first());
-                }
-                qDeleteAll(meetings);
-            });
-            return;
         }
-
-        QString html = QString::fromUtf8(reply->readAll());
         reply->deleteLater();
 
-        QList<Meeting*> meetings = parseMeetingList(html);
-        qDebug() << "Found" << meetings.size() << "meetings in year" << currentYear;
+        // Also check previous year to handle year boundary and wrong system clock
+        int previousYear = currentYear - 1;
+        QString prevUrl = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(previousYear);
+        QNetworkRequest prevRequest(prevUrl);
+        QNetworkReply *prevReply = m_networkManager->get(prevRequest);
 
-        if (meetings.isEmpty()) {
-            qDebug() << "No meetings found in current year, trying next year";
-            // Try next year
-            QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(nextYear);
-            QNetworkRequest request(url);
-            QNetworkReply *nextYearReply = m_networkManager->get(request);
-            connect(nextYearReply, &QNetworkReply::finished, this, [this, nextYearReply, nextYear]() {
-                if (nextYearReply->error() != QNetworkReply::NoError) {
-                    qDebug() << "Failed to fetch meetings for year" << nextYear;
-                    nextYearReply->deleteLater();
-                    return;
-                }
+        connect(prevReply, &QNetworkReply::finished, this, [this, prevReply, previousYear, currentYearMeetings]() mutable {
+            QList<Meeting*> allMeetings = currentYearMeetings;
 
-                QString html = QString::fromUtf8(nextYearReply->readAll());
-                nextYearReply->deleteLater();
+            if (prevReply->error() == QNetworkReply::NoError) {
+                QString prevHtml = QString::fromUtf8(prevReply->readAll());
+                QList<Meeting*> prevYearMeetings = parseMeetingList(prevHtml);
+                qDebug() << "Found" << prevYearMeetings.size() << "meetings in year" << previousYear;
+                allMeetings.append(prevYearMeetings);
+            } else {
+                qDebug() << "Failed to fetch meetings for year" << previousYear;
+            }
+            prevReply->deleteLater();
 
-                QList<Meeting*> meetings = parseMeetingList(html);
-                qDebug() << "Found" << meetings.size() << "meetings in year" << nextYear;
-                if (!meetings.isEmpty()) {
-                    fetchLogForNextMeeting(meetings.first());
-                }
-                qDeleteAll(meetings);
-            });
-            return;
-        }
+            if (allMeetings.isEmpty()) {
+                qDebug() << "No meetings found in any year";
+                return;
+            }
 
-        // Get the most recent meeting (already sorted by date descending)
-        Meeting *mostRecent = meetings.first();
-        qDebug() << "Most recent meeting:" << mostRecent->filename();
+            // Sort all meetings by date descending to get the truly most recent one
+            std::sort(allMeetings.begin(), allMeetings.end(),
+                      [](const Meeting *a, const Meeting *b) {
+                          return a->dateTime() > b->dateTime();
+                      });
 
-        fetchLogForNextMeeting(mostRecent);
+            // Get the most recent meeting across both years
+            Meeting *mostRecent = allMeetings.first();
+            qDebug() << "Most recent meeting across all years:" << mostRecent->filename() << "Date:" << mostRecent->dateTime().toString(Qt::ISODate);
 
-        // Clean up meetings
-        qDeleteAll(meetings);
+            fetchLogForNextMeeting(mostRecent);
+
+            // Clean up meetings
+            qDeleteAll(allMeetings);
+        });
     });
 }
 
