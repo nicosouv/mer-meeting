@@ -464,7 +464,7 @@ void MeetingManager::onNextMeetingContentReplyFinished()
 
     if (!nextMeetingDate.isEmpty()) {
         // Also extract the raw ISO date (without Z)
-        QRegularExpression re("#info\\s+Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4})Z");
+        QRegularExpression re("#info\\s*(?:</span>)?(?:<span[^>]*>)?\\s*Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4})Z");
         QRegularExpressionMatch match = re.match(content);
         QString rawDate = match.hasMatch() ? match.captured(1) + "Z" : "";
 
@@ -478,7 +478,8 @@ QString MeetingManager::parseNextMeetingFromLog(const QString &html)
 {
     // Look for pattern: "#info Next meeting will be held on ... 2025-11-20T1600Z"
     // Format is: YYYY-MM-DDTHHMM Z (no colon in time)
-    QRegularExpression re("#info\\s+Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4})Z");
+    // The HTML contains span tags, so we need to account for them: #info </span><span class="cmdline">Next meeting...
+    QRegularExpression re("#info\\s*(?:</span>)?(?:<span[^>]*>)?\\s*Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4})Z");
     QRegularExpressionMatch match = re.match(html);
 
     if (!match.hasMatch()) {
