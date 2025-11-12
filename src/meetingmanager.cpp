@@ -370,14 +370,10 @@ void MeetingManager::markAsRead(const QString &meetingId)
 
 void MeetingManager::fetchNextMeetingDate()
 {
-    qDebug() << "Fetching next meeting date...";
-
     // Get current year and next year
     QDateTime now = QDateTime::currentDateTime();
     int currentYear = now.date().year();
     int nextYear = currentYear + 1;
-
-    qDebug() << "Current year from system:" << currentYear << "Current date:" << now.toString(Qt::ISODate);
 
     // Try current year first
     QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(currentYear);
@@ -393,9 +389,6 @@ void MeetingManager::fetchNextMeetingDate()
         if (reply->error() == QNetworkReply::NoError) {
             html = QString::fromUtf8(reply->readAll());
             currentYearMeetings = parseMeetingList(html);
-            qDebug() << "Found" << currentYearMeetings.size() << "meetings in year" << currentYear;
-        } else {
-            qDebug() << "Failed to fetch meetings for year" << currentYear;
         }
         reply->deleteLater();
 
@@ -411,15 +404,11 @@ void MeetingManager::fetchNextMeetingDate()
             if (prevReply->error() == QNetworkReply::NoError) {
                 QString prevHtml = QString::fromUtf8(prevReply->readAll());
                 QList<Meeting*> prevYearMeetings = parseMeetingList(prevHtml);
-                qDebug() << "Found" << prevYearMeetings.size() << "meetings in year" << previousYear;
                 allMeetings.append(prevYearMeetings);
-            } else {
-                qDebug() << "Failed to fetch meetings for year" << previousYear;
             }
             prevReply->deleteLater();
 
             if (allMeetings.isEmpty()) {
-                qDebug() << "No meetings found in any year";
                 return;
             }
 
@@ -431,7 +420,6 @@ void MeetingManager::fetchNextMeetingDate()
 
             // Get the most recent meeting across both years
             Meeting *mostRecent = allMeetings.first();
-            qDebug() << "Most recent meeting across all years:" << mostRecent->filename() << "Date:" << mostRecent->dateTime().toString(Qt::ISODate);
 
             fetchLogForNextMeeting(mostRecent);
 
@@ -443,7 +431,6 @@ void MeetingManager::fetchNextMeetingDate()
 
 void MeetingManager::fetchLogForNextMeeting(Meeting *meeting)
 {
-    qDebug() << "Fetching log for meeting:" << meeting->logUrl();
 
     // Fetch the log content of the meeting
     QNetworkRequest logRequest(meeting->logUrl());
@@ -487,26 +474,10 @@ QString MeetingManager::parseNextMeetingFromLog(const QString &html)
     QRegularExpressionMatch match = re.match(html);
 
     if (!match.hasMatch()) {
-        qDebug() << "No next meeting date found in log";
-
-        // Debug: try to find any #info line
-        QRegularExpression debugRe("#info.*");
-        QRegularExpressionMatchIterator it = debugRe.globalMatch(html);
-        qDebug() << "Found #info lines:";
-        int count = 0;
-        while (it.hasNext() && count < 5) {
-            QRegularExpressionMatch debugMatch = it.next();
-            QString line = debugMatch.captured(0);
-            if (line.length() > 200) line = line.left(200) + "...";
-            qDebug() << "  -" << line;
-            count++;
-        }
-
         return QString();
     }
 
     QString dateStr = match.captured(1);
-    qDebug() << "Found next meeting date string:" << dateStr;
 
     // Parse the date format: 2024-11-28T0800 (without Z)
     // Format is yyyy-MM-ddTHHmm
@@ -514,21 +485,16 @@ QString MeetingManager::parseNextMeetingFromLog(const QString &html)
     meetingDateTime.setTimeSpec(Qt::UTC);
 
     if (!meetingDateTime.isValid()) {
-        qDebug() << "Failed to parse date:" << dateStr;
         return QString();
     }
 
     // Check if the date is in the future
     QDateTime now = QDateTime::currentDateTimeUtc();
-    qDebug() << "Meeting datetime:" << meetingDateTime.toString(Qt::ISODate) << "Now:" << now.toString(Qt::ISODate);
 
     if (meetingDateTime > now) {
         // Format for display
         QString formatted = meetingDateTime.toString("dddd d MMMM yyyy") + " - " + meetingDateTime.toString("HH:mm") + " UTC";
-        qDebug() << "Next meeting formatted:" << formatted;
         return formatted;
-    } else {
-        qDebug() << "Meeting date is in the past:" << meetingDateTime.toString(Qt::ISODate);
     }
 
     return QString();
@@ -541,11 +507,8 @@ QString MeetingManager::getNextMeetingDate() const
 
 void MeetingManager::saveIcsFile(const QString &path, const QString &content)
 {
-    qDebug() << "Saving ICS file to:" << path;
-
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qDebug() << "Failed to create ICS file:" << file.errorString();
         return;
     }
 
@@ -553,11 +516,7 @@ void MeetingManager::saveIcsFile(const QString &path, const QString &content)
     out << content;
     file.close();
 
-    qDebug() << "ICS file saved, opening with system handler";
-
     // Open the ICS file with the default calendar app
     QUrl fileUrl = QUrl::fromLocalFile(path);
-    if (!QDesktopServices::openUrl(fileUrl)) {
-        qDebug() << "Failed to open ICS file";
-    }
+    QDesktopServices::openUrl(fileUrl);
 }

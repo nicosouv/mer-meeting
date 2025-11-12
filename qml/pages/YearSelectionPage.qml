@@ -12,11 +12,9 @@ Page {
     Component.onCompleted: {
         // Load saved date first
         nextMeetingDate = meetingManager.getNextMeetingDate()
-        console.log("Loaded saved next meeting date:", nextMeetingDate)
 
         // Always fetch fresh data to check for new meetings
         // This ensures we always have the most recent meeting's next date
-        console.log("Fetching fresh next meeting date...")
         meetingManager.fetchNextMeetingDate()
     }
 
@@ -30,19 +28,14 @@ Page {
 
     function addToCalendar() {
         if (nextMeetingDateRaw === "") {
-            console.log("No raw date available")
             return
         }
-
-        console.log("Adding to calendar with date:", nextMeetingDateRaw)
 
         // Parse the ISO date format: 2024-11-28T0800Z
         // Need to insert colon in time: 2024-11-28T08:00Z
         var formattedDate = nextMeetingDateRaw.replace(/T(\d{2})(\d{2})Z/, "T$1:$2Z")
-        console.log("Formatted date for parsing:", formattedDate)
 
         var dateTime = new Date(formattedDate)
-        console.log("Parsed datetime:", dateTime)
 
         // Format for iCalendar format (YYYYMMDDTHHMMSSZ)
         var year = dateTime.getUTCFullYear()
@@ -83,7 +76,6 @@ Page {
 
         // Save to temp file and open with calendar
         var tempPath = "/tmp/sfos-meeting.ics"
-        console.log("Creating ICS file at:", tempPath)
 
         // Use Qt.openUrlExternally with file:// to open the ICS file
         meetingManager.saveIcsFile(tempPath, icsContent)
