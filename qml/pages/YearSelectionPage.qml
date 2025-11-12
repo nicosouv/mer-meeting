@@ -1,7 +1,5 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-import org.nemomobile.calendar 1.0
-import Nemo.Notifications 1.0
 
 Page {
     id: page
@@ -46,57 +44,37 @@ Page {
         var dateTime = new Date(formattedDate)
         console.log("Parsed datetime:", dateTime)
 
-        // Meeting usually lasts 1 hour
+        // Format for iCalendar format (YYYYMMDDTHHMMSSZ)
+        var year = dateTime.getUTCFullYear()
+        var month = ("0" + (dateTime.getUTCMonth() + 1)).slice(-2)
+        var day = ("0" + dateTime.getUTCDate()).slice(-2)
+        var hours = ("0" + dateTime.getUTCHours()).slice(-2)
+        var minutes = ("0" + dateTime.getUTCMinutes()).slice(-2)
+        var startTimeFormatted = year + month + day + "T" + hours + minutes + "00Z"
+
+        // End time (1 hour later)
         var endTime = new Date(dateTime.getTime() + 60 * 60 * 1000)
+        var endYear = endTime.getUTCFullYear()
+        var endMonth = ("0" + (endTime.getUTCMonth() + 1)).slice(-2)
+        var endDay = ("0" + endTime.getUTCDate()).slice(-2)
+        var endHours = ("0" + endTime.getUTCHours()).slice(-2)
+        var endMinutes = ("0" + endTime.getUTCMinutes()).slice(-2)
+        var endTimeFormatted = endYear + endMonth + endDay + "T" + endHours + endMinutes + "00Z"
 
-        // Get the default notebook UID
-        var notebooks = Calendar.notebooks
-        var defaultNotebookUid = ""
+        // Create webcal URL to open in calendar app
+        var title = encodeURIComponent("Sailfish OS Community Meeting")
+        var description = encodeURIComponent("Monthly community meeting to discuss Sailfish OS development and topics")
+        var location = encodeURIComponent("IRC: #sailfishos-meeting on libera.chat")
 
-        console.log("Found", notebooks.length, "notebooks")
+        // Use the jolla-calendar command to open calendar
+        var calendarUrl = "jolla-calendar://event?startTime=" + startTimeFormatted +
+                         "&endTime=" + endTimeFormatted +
+                         "&title=" + title +
+                         "&description=" + description +
+                         "&location=" + location
 
-        for (var i = 0; i < notebooks.length; i++) {
-            console.log("Notebook:", notebooks[i].uid, notebooks[i].name, "default:", notebooks[i].isDefault)
-            if (notebooks[i].isDefault) {
-                defaultNotebookUid = notebooks[i].uid
-                break
-            }
-        }
-
-        // If no default, use the first one
-        if (defaultNotebookUid === "" && notebooks.length > 0) {
-            defaultNotebookUid = notebooks[0].uid
-        }
-
-        console.log("Using notebook UID:", defaultNotebookUid)
-
-        // Create event with all properties at once
-        var event = Calendar.createNewEvent(
-            defaultNotebookUid,
-            "Sailfish OS Community Meeting",
-            "Monthly community meeting to discuss Sailfish OS development and topics",
-            dateTime,
-            endTime,
-            false  // allDay
-        )
-
-        if (event) {
-            event.location = "IRC: #sailfishos-meeting on libera.chat"
-            event.save()
-            console.log("Event saved successfully")
-
-            // Show confirmation
-            calendarNotification.publish()
-        } else {
-            console.log("Failed to create event")
-        }
-    }
-
-    Notification {
-        id: calendarNotification
-        appName: "SFOS Meetings"
-        summary: qsTr("Added to calendar")
-        body: qsTr("The next meeting has been added to your calendar")
+        console.log("Opening calendar with URL:", calendarUrl)
+        Qt.openUrlExternally(calendarUrl)
     }
 
     SilicaListView {
