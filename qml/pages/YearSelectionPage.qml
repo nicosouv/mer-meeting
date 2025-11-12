@@ -6,6 +6,19 @@ Page {
 
     allowedOrientations: Orientation.All
 
+    property string nextMeetingDate: meetingManager.getNextMeetingDate()
+
+    Component.onCompleted: {
+        meetingManager.fetchNextMeetingDate()
+    }
+
+    Connections {
+        target: meetingManager
+        onNextMeetingDateChanged: {
+            nextMeetingDate = date
+        }
+    }
+
     SilicaListView {
         id: listView
         anchors.fill: parent
@@ -17,8 +30,48 @@ Page {
             }
         }
 
-        header: PageHeader {
-            title: qsTr("Sailfish OS Meetings")
+        header: Column {
+            width: parent.width
+
+            PageHeader {
+                title: qsTr("Sailfish OS Meetings")
+            }
+
+            Item {
+                width: parent.width
+                height: nextMeetingDate !== "" ? nextMeetingBanner.height : 0
+                visible: nextMeetingDate !== ""
+
+                Rectangle {
+                    id: nextMeetingBanner
+                    width: parent.width
+                    height: nextMeetingColumn.height + Theme.paddingLarge * 2
+                    color: Theme.rgba(Theme.highlightBackgroundColor, 0.2)
+
+                    Column {
+                        id: nextMeetingColumn
+                        x: Theme.horizontalPageMargin
+                        y: Theme.paddingLarge
+                        width: parent.width - 2 * Theme.horizontalPageMargin
+                        spacing: Theme.paddingSmall
+
+                        Label {
+                            text: qsTr("Next Meeting")
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.bold: true
+                            color: Theme.highlightColor
+                        }
+
+                        Label {
+                            text: nextMeetingDate
+                            font.pixelSize: Theme.fontSizeSmall
+                            color: Theme.primaryColor
+                            wrapMode: Text.Wrap
+                            width: parent.width
+                        }
+                    }
+                }
+            }
         }
 
         model: meetingManager.getAvailableYears()

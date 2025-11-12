@@ -32,6 +32,8 @@ public:
     Q_INVOKABLE QStringList getFavorites() const;
     Q_INVOKABLE bool isRead(const QString &meetingId) const;
     Q_INVOKABLE void markAsRead(const QString &meetingId);
+    Q_INVOKABLE void fetchNextMeetingDate();
+    Q_INVOKABLE QString getNextMeetingDate() const;
 
 signals:
     void meetingsLoaded(QVariantList meetings);
@@ -40,10 +42,12 @@ signals:
     void htmlContentLoaded(QString content);
     void favoritesChanged();
     void readStatusChanged();
+    void nextMeetingDateChanged(QString date);
 
 private slots:
     void onMeetingListReplyFinished();
     void onHtmlContentReplyFinished();
+    void onNextMeetingContentReplyFinished();
 
 private:
     QNetworkAccessManager *m_networkManager;
@@ -54,6 +58,7 @@ private:
     void setLoading(bool loading);
     void setError(const QString &error);
     QList<Meeting*> parseMeetingList(const QString &html);
+    QString parseNextMeetingFromLog(const QString &html);
 };
 
 #endif // MEETINGMANAGER_H

@@ -362,3 +362,94 @@ void MeetingManager::markAsRead(const QString &meetingId)
         emit readStatusChanged();
     }
 }
+
+void MeetingManager::fetchNextMeetingDate()
+{
+    // Get current year's meetings to find the most recent one
+    int currentYear = QDateTime::currentDateTime().date().year();
+    QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(currentYear);
+
+    QNetworkRequest request(url);
+    QNetworkReply *reply = m_networkManager->get(request);
+
+    // Create a lambda to handle the meeting list for next meeting date
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() != QNetworkReply::NoError) {
+            reply->deleteLater();
+            return;
+        }
+
+        QString html = QString::fromUtf8(reply->readAll());
+        reply->deleteLater();
+
+        QList<Meeting*> meetings = parseMeetingList(html);
+
+        if (meetings.isEmpty()) {
+            return;
+        }
+
+        // Get the most recent meeting (already sorted by date descending)
+        Meeting *mostRecent = meetings.first();
+
+        // Fetch the log content of the most recent meeting
+        QNetworkRequest logRequest(mostRecent->logUrl());
+        QNetworkReply *logReply = m_networkManager->get(logRequest);
+        connect(logReply, &QNetworkReply::finished, this, &MeetingManager::onNextMeetingContentReplyFinished);
+
+        // Clean up meetings
+        qDeleteAll(meetings);
+    });
+}
+
+void MeetingManager::onNextMeetingContentReplyFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+
+    if (reply->error() != QNetworkReply::NoError) {
+        reply->deleteLater();
+        return;
+    }
+
+    QString content = QString::fromUtf8(reply->readAll());
+    reply->deleteLater();
+
+    QString nextMeetingDate = parseNextMeetingFromLog(content);
+
+    if (!nextMeetingDate.isEmpty()) {
+        m_settings->setValue("nextMeetingDate", nextMeetingDate);
+        emit nextMeetingDateChanged(nextMeetingDate);
+    }
+}
+
+QString MeetingManager::parseNextMeetingFromLog(const QString &html)
+{
+    // Look for pattern: "#info Next meeting will be held on ... 2025-11-20T1600Z"
+    QRegularExpression re("#info\\s+Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4}Z)");
+    QRegularExpressionMatch match = re.match(html);
+
+    if (!match.hasMatch()) {
+        return QString();
+    }
+
+    QString dateStr = match.captured(1);
+
+    // Parse the date format: 2025-11-20T1600Z
+    QDateTime meetingDateTime = QDateTime::fromString(dateStr, "yyyy-MM-ddTHHmmZ");
+    meetingDateTime.setTimeSpec(Qt::UTC);
+
+    // Check if the date is in the future
+    QDateTime now = QDateTime::currentDateTimeUtc();
+
+    if (meetingDateTime > now) {
+        // Format for display
+        return meetingDateTime.toString("dddd d MMMM yyyy - HH:mm") + " UTC";
+    }
+
+    return QString();
+}
+
+QString MeetingManager::getNextMeetingDate() const
+{
+    return m_settings->value("nextMeetingDate").toString();
+}
