@@ -365,17 +365,44 @@ void MeetingManager::markAsRead(const QString &meetingId)
 
 void MeetingManager::fetchNextMeetingDate()
 {
-    // Get current year's meetings to find the most recent one
+    qDebug() << "Fetching next meeting date...";
+
+    // Get current year and next year
     int currentYear = QDateTime::currentDateTime().date().year();
+    int nextYear = currentYear + 1;
+
+    // Try current year first
     QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(currentYear);
 
     QNetworkRequest request(url);
     QNetworkReply *reply = m_networkManager->get(request);
 
     // Create a lambda to handle the meeting list for next meeting date
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, [this, reply, currentYear, nextYear]() {
         if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Failed to fetch meetings for year" << currentYear;
             reply->deleteLater();
+
+            // Try next year if current year failed
+            QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(nextYear);
+            QNetworkRequest request(url);
+            QNetworkReply *nextYearReply = m_networkManager->get(request);
+            connect(nextYearReply, &QNetworkReply::finished, this, [this, nextYearReply, nextYear]() {
+                if (nextYearReply->error() != QNetworkReply::NoError) {
+                    qDebug() << "Failed to fetch meetings for year" << nextYear;
+                    nextYearReply->deleteLater();
+                    return;
+                }
+
+                QString html = QString::fromUtf8(nextYearReply->readAll());
+                nextYearReply->deleteLater();
+
+                QList<Meeting*> meetings = parseMeetingList(html);
+                if (!meetings.isEmpty()) {
+                    fetchLogForNextMeeting(meetings.first());
+                }
+                qDeleteAll(meetings);
+            });
             return;
         }
 
@@ -383,22 +410,53 @@ void MeetingManager::fetchNextMeetingDate()
         reply->deleteLater();
 
         QList<Meeting*> meetings = parseMeetingList(html);
+        qDebug() << "Found" << meetings.size() << "meetings in year" << currentYear;
 
         if (meetings.isEmpty()) {
+            qDebug() << "No meetings found in current year, trying next year";
+            // Try next year
+            QString url = QString("https://irclogs.sailfishos.org/meetings/sailfishos-meeting/%1/").arg(nextYear);
+            QNetworkRequest request(url);
+            QNetworkReply *nextYearReply = m_networkManager->get(request);
+            connect(nextYearReply, &QNetworkReply::finished, this, [this, nextYearReply, nextYear]() {
+                if (nextYearReply->error() != QNetworkReply::NoError) {
+                    qDebug() << "Failed to fetch meetings for year" << nextYear;
+                    nextYearReply->deleteLater();
+                    return;
+                }
+
+                QString html = QString::fromUtf8(nextYearReply->readAll());
+                nextYearReply->deleteLater();
+
+                QList<Meeting*> meetings = parseMeetingList(html);
+                qDebug() << "Found" << meetings.size() << "meetings in year" << nextYear;
+                if (!meetings.isEmpty()) {
+                    fetchLogForNextMeeting(meetings.first());
+                }
+                qDeleteAll(meetings);
+            });
             return;
         }
 
         // Get the most recent meeting (already sorted by date descending)
         Meeting *mostRecent = meetings.first();
+        qDebug() << "Most recent meeting:" << mostRecent->filename();
 
-        // Fetch the log content of the most recent meeting
-        QNetworkRequest logRequest(mostRecent->logUrl());
-        QNetworkReply *logReply = m_networkManager->get(logRequest);
-        connect(logReply, &QNetworkReply::finished, this, &MeetingManager::onNextMeetingContentReplyFinished);
+        fetchLogForNextMeeting(mostRecent);
 
         // Clean up meetings
         qDeleteAll(meetings);
     });
+}
+
+void MeetingManager::fetchLogForNextMeeting(Meeting *meeting)
+{
+    qDebug() << "Fetching log for meeting:" << meeting->logUrl();
+
+    // Fetch the log content of the meeting
+    QNetworkRequest logRequest(meeting->logUrl());
+    QNetworkReply *logReply = m_networkManager->get(logRequest);
+    connect(logReply, &QNetworkReply::finished, this, &MeetingManager::onNextMeetingContentReplyFinished);
 }
 
 void MeetingManager::onNextMeetingContentReplyFinished()

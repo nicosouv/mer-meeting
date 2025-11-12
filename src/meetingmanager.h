@@ -59,6 +59,7 @@ private:
     void setError(const QString &error);
     QList<Meeting*> parseMeetingList(const QString &html);
     QString parseNextMeetingFromLog(const QString &html);
+    void fetchLogForNextMeeting(Meeting *meeting);
 };
 
 #endif // MEETINGMANAGER_H

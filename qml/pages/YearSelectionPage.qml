@@ -16,7 +16,9 @@ Page {
         nextMeetingDate = meetingManager.getNextMeetingDate()
         console.log("Loaded saved next meeting date:", nextMeetingDate)
 
-        // Then fetch fresh data
+        // Always fetch fresh data to check for new meetings
+        // This ensures we always have the most recent meeting's next date
+        console.log("Fetching fresh next meeting date...")
         meetingManager.fetchNextMeetingDate()
     }
 
