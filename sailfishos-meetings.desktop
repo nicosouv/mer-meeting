@@ -3,5 +3,5 @@ Type=Application
 X-Nemo-Application-Type=silica-qt5
 Icon=sailfishos-meetings
 Exec=sailfishos-meetings
-Name=SailfishOS Meetings
-Name[de]=SailfishOS Meetings
+Name=SFOS Meetings
+Name[de]=SFOS Meetings
