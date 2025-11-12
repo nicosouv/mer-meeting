@@ -476,13 +476,27 @@ void MeetingManager::onNextMeetingContentReplyFinished()
 
 QString MeetingManager::parseNextMeetingFromLog(const QString &html)
 {
-    // Look for pattern: "#info Next meeting will be held on ... 2024-11-28T0800Z"
+    // Look for pattern: "#info Next meeting will be held on ... 2025-11-20T1600Z"
     // Format is: YYYY-MM-DDTHHMM Z (no colon in time)
     QRegularExpression re("#info\\s+Next meeting will be held on.*?(\\d{4}-\\d{2}-\\d{2}T\\d{4})Z");
     QRegularExpressionMatch match = re.match(html);
 
     if (!match.hasMatch()) {
         qDebug() << "No next meeting date found in log";
+
+        // Debug: try to find any #info line
+        QRegularExpression debugRe("#info.*");
+        QRegularExpressionMatchIterator it = debugRe.globalMatch(html);
+        qDebug() << "Found #info lines:";
+        int count = 0;
+        while (it.hasNext() && count < 5) {
+            QRegularExpressionMatch debugMatch = it.next();
+            QString line = debugMatch.captured(0);
+            if (line.length() > 200) line = line.left(200) + "...";
+            qDebug() << "  -" << line;
+            count++;
+        }
+
         return QString();
     }
 
