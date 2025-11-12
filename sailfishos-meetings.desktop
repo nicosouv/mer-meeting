@@ -5,3 +5,8 @@ Icon=sailfishos-meetings
 Exec=sailfishos-meetings
 Name=SFOS Meetings
 Name[de]=SFOS Meetings
+
+[X-Sailjail]
+Permissions=Internet
+OrganizationName=org.sfos
+ApplicationName=Meetings
