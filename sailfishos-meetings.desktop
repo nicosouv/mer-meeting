@@ -7,6 +7,6 @@ Name=SFOS Meetings
 Name[de]=SFOS Meetings
 
 [X-Sailjail]
-Permissions=Internet
+Permissions=Internet;Calendar
 OrganizationName=org.sfos
 ApplicationName=Meetings

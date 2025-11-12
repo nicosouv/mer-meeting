@@ -38,11 +38,6 @@ Page {
 
         console.log("Adding to calendar with date:", nextMeetingDateRaw)
 
-        var event = Calendar.createNewEvent()
-        event.displayLabel = "Sailfish OS Community Meeting"
-        event.description = "Monthly community meeting to discuss Sailfish OS development and topics"
-        event.location = "IRC: #sailfishos-meeting on libera.chat"
-
         // Parse the ISO date format: 2024-11-28T0800Z
         // Need to insert colon in time: 2024-11-28T08:00Z
         var formattedDate = nextMeetingDateRaw.replace(/T(\d{2})(\d{2})Z/, "T$1:$2Z")
@@ -51,17 +46,29 @@ Page {
         var dateTime = new Date(formattedDate)
         console.log("Parsed datetime:", dateTime)
 
-        event.startTime = dateTime
-
         // Meeting usually lasts 1 hour
         var endTime = new Date(dateTime.getTime() + 60 * 60 * 1000)
-        event.endTime = endTime
 
-        event.calendarUid = Calendar.defaultNotebook
-        event.save()
+        // Create event with all properties at once
+        var event = Calendar.createNewEvent(
+            Calendar.defaultNotebook,
+            "Sailfish OS Community Meeting",
+            "Monthly community meeting to discuss Sailfish OS development and topics",
+            dateTime,
+            endTime,
+            false  // allDay
+        )
 
-        // Show confirmation
-        calendarNotification.publish()
+        if (event) {
+            event.location = "IRC: #sailfishos-meeting on libera.chat"
+            event.save()
+            console.log("Event saved successfully")
+
+            // Show confirmation
+            calendarNotification.publish()
+        } else {
+            console.log("Failed to create event")
+        }
     }
 
     Notification {
