@@ -49,9 +49,30 @@ Page {
         // Meeting usually lasts 1 hour
         var endTime = new Date(dateTime.getTime() + 60 * 60 * 1000)
 
+        // Get the default notebook UID
+        var notebooks = Calendar.notebooks
+        var defaultNotebookUid = ""
+
+        console.log("Found", notebooks.length, "notebooks")
+
+        for (var i = 0; i < notebooks.length; i++) {
+            console.log("Notebook:", notebooks[i].uid, notebooks[i].name, "default:", notebooks[i].isDefault)
+            if (notebooks[i].isDefault) {
+                defaultNotebookUid = notebooks[i].uid
+                break
+            }
+        }
+
+        // If no default, use the first one
+        if (defaultNotebookUid === "" && notebooks.length > 0) {
+            defaultNotebookUid = notebooks[0].uid
+        }
+
+        console.log("Using notebook UID:", defaultNotebookUid)
+
         // Create event with all properties at once
         var event = Calendar.createNewEvent(
-            Calendar.defaultNotebook,
+            defaultNotebookUid,
             "Sailfish OS Community Meeting",
             "Monthly community meeting to discuss Sailfish OS development and topics",
             dateTime,
